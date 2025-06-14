@@ -1,7 +1,9 @@
 use image::{GrayImage, Luma};
+use rand::distributions::uniform::SampleRange;
 use rand::prelude::*;
+use std::io::{stdin, stdout, Write};
 use std::path::Path;
-use text_io::read;
+use std::str::FromStr;
 
 #[derive(Copy, Clone)]
 struct Point {
@@ -16,13 +18,13 @@ impl Point {
 
     fn rand(
         rand: &mut impl Rng,
-        x_range: impl rand::distributions::uniform::SampleRange<i32>,
-        y_range: impl rand::distributions::uniform::SampleRange<i32>,
+        x_range: impl SampleRange<i32>,
+        y_range: impl SampleRange<i32>,
     ) -> Self {
         Self::new(rand.gen_range(x_range), rand.gen_range(y_range))
     }
 
-    fn squared_dist(&self, x: i32, y: i32) -> u32 {
+    fn squared_dist(self, x: i32, y: i32) -> u32 {
         let a = self.x - x;
         let b = self.y - y;
         (a * a + b * b) as u32
@@ -65,7 +67,7 @@ fn generate_random_characters(length: usize) -> String {
 }
 
 // one wouldn't normally use squared distance + that arbritary division by 28 but i think it looks better so i did it here
-fn generate_image(width: u32, height: u32, points: &Vec<Point>) -> GrayImage {
+fn generate_image(width: u32, height: u32, points: &Box<[Point]>) -> GrayImage {
     GrayImage::from_fn(width, height, |x, y| {
         let closest = points
             .iter()
@@ -77,7 +79,7 @@ fn generate_image(width: u32, height: u32, points: &Vec<Point>) -> GrayImage {
     })
 }
 
-fn generate_points(width: u32, height: u32, number_of_points: u32) -> Vec<Point> {
+fn generate_points(width: u32, height: u32, number_of_points: u32) -> Box<[Point]> {
     let mut rng = rand::thread_rng();
 
     (0..number_of_points)
@@ -85,7 +87,23 @@ fn generate_points(width: u32, height: u32, number_of_points: u32) -> Vec<Point>
         .collect()
 }
 
-fn input(msg: &str) -> u32 {
-    print!("{msg}");
-    read!()
+const COLOR_CYAN: &str = "\x1b[36m";
+const COLOR_GREEN: &str = "\x1b[32m";
+const MODIFIER_RESET: &str = "\x1b[0m";
+
+fn input<T: FromStr>(msg: &str) -> T {
+    loop {
+        let mut i = String::new();
+
+        print!("{COLOR_GREEN}{msg}{MODIFIER_RESET}");
+        stdout().flush().unwrap();
+
+        if let Ok(_) = stdin().read_line(&mut i) {
+            if let Ok(i) = i.trim().parse::<T>() {
+                return i;
+            }
+        }
+
+        println!("{COLOR_CYAN}Invalid input, try again.{MODIFIER_RESET}");
+    }
 }
